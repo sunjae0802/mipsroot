@@ -1,0 +1,23 @@
+This contains all the files needed to build a MIPS cross-compiler. It is based off of Cross Linux From Scratch
+2.1 (http://clfs.org/view/CLFS-2.1.0/mips) along with a build script install-mips-cc.sh which itself is based off of
+SESC's install-mips.sh, cleaned up and updated for CLFS 2.1 and a modern Linux system.
+
+We assume an environment variable CLFS set to a working directory, i.e. /home/user/mipsroot:
+$ export CLFS=$HOME/mipsroot
+
+To download the relevant sources, run
+$ wget -i dl-mips-cc.list -P ${CLFS}/sources
+
+Since the original CLFS website is down, we need to get eglibc sources directly from the svn snapshot:
+$ svn export -r r24148 svn://svn.eglibc.org/branches/eglibc-2_18/libc eglibc-2.18
+$ tar -cJf ${CLFS}/sources/eglibc-2.18-r24148.tar.xz eglibc-2.18
+
+I've also included the patch files which should be included in the ${CLFS}/sources directory.
+
+To run the build script, we first need to get some symbolic links ready. After creating ${CLFS}/tool and
+${CLFS}/cross-tools directories, run as root:
+# ln -sv ${CLFS}/tools /
+# ln -sv ${CLFS}/cross-tools /
+
+Run the following to get the build done in a clean environment:
+$ env -i HOME=${HOME} TERM=${TERM} PS1='\u:\w$ ' CLFS=`pwd` ./install-mips-cc.sh
