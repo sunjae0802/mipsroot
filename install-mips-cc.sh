@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Based on mipsemul-sys/install-mips from SESC, and CLFS 2.1, which have the
+# Based on mipsemul-sys/install-mips from SESC, and CLFS 3.0, which have the
 # following copyrights.
 
 # Copyright (C) 2009 Milos Prvulovic
-# Based on CLFS 2.1, Copyright © 2005-2013 Joe Ciccone, Jim Gifford, & Ryan Oliver 
+# Based on CLFS 3.0, Copyright © 2005-2014 Joe Ciccone, Jim Gifford, & Ryan Oliver 
 
 # This file is part of SESC and is based on (and heavilly borrows from) CLFS
 # Please read both the SESC (GPL) license and the CLFS (OPL) license before
@@ -15,15 +15,9 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
 # See the GNU General Public License for more details.
 
-# Changes from CLFS 2.1 to get building with gcc 5+
-# Added binutils-fix-errors-in-bfd-header.patch
-# Added to configure line: --disable-werror
-# Added gcc-4.8.1-fix-cfns-inlines.patch
-# Added eglibc-2.18-fixmake-versioncheck.patch
-
 if [ $# -gt 0 ]; then
-    echo "Builds and installs a 32-bit MIPS cross-compiler based on CLFS 2.1."
-    echo "Make sure you have sources available in the '$SOURCES' directory"
+    echo "Builds and installs a 32-bit MIPS cross-compiler based on CLFS 3.0."
+    echo "Make sure you have sources available in the '$SOURCESDIR' directory"
     echo "before building, and have symbolic links /tools and /cross-tools"
     echo "pointing to the \$CLFS/tools and \$CLFS/cross-tools."
     echo ""
@@ -56,12 +50,12 @@ echo "-----------------------------"
 echo "Using $CLFS as base directory"
 echo "-----------------------------"
 
-SOURCES=${CLFS}/sources
-BUILD=${CLFS}/build
+SOURCESDIR=${CLFS}/sources
+BUILDDIR=${CLFS}/build
 LOG=build.log
 CLFS_HOST="x86_64-cross-linux"
 CLFS_TARGET="mips-unknown-linux-gnu"
-KERNEL_VER="2.6.16" # XXX: CLFS 2.1 says 2.6.32, but we need 2.6.16
+KERNEL_VER="2.6.16" # XXX: SESC needs 2.6.16
 
 ###################################
 # Prepare for building
@@ -84,9 +78,9 @@ then
     echo "Create link as root: ln -sv ${CLFS}/cross-tools /"
     exit 1
 fi
-if [ ! -d $SOURCES ]
+if [ ! -d $SOURCESDIR ]
 then
-    echo "SOURCES directory $SOURCES does not exist!"
+    echo "SOURCES directory $SOURCESDIR does not exist!"
     exit 1
 fi
 
@@ -102,15 +96,15 @@ export CLFS_HOST CLFS_TARGET
 unset CFLAGS
 unset CXXFLAGS
 
-mkdir -p $BUILD
+mkdir -p $BUILDDIR
 
 ################################################################
 # Helper function function_install
 #
 # Function that takes the following arguments and
 # extracts, builds and installs the specified package.
-# All builds are done within the $BUILD directory, and
-# extract sources from the $SOURCES directory.
+# All builds are done within the $BUILDDIR directory, and
+# extract sources from the $SOURCESDIR directory.
 #
 #PACKAGE= # Name of the package
 #VERSION= # Verson
@@ -127,7 +121,7 @@ function_install() {
         echo "Skipping ${PACKAGE}"
         return
     fi
-    if [ ! -f "${SOURCES}/${FILE}" ]; then
+    if [ ! -f "${SOURCESDIR}/${FILE}" ]; then
         echo "Source tarball for ${PACKAGE} not found!"
         exit 2
     fi
@@ -136,7 +130,7 @@ function_install() {
     echo Build/installing $PACKAGE
     echo "-----------------------------"
 
-    pushd $BUILD
+    pushd $BUILDDIR
 
     if [ -z "${SRCPATH}" ]
     then
@@ -146,13 +140,13 @@ function_install() {
 
     ext=${FILE##*.}
     if [ "$ext" = "gz" ]; then
-        tar -xzf ${SOURCES}/$FILE
+        tar -xzf ${SOURCESDIR}/$FILE
     elif [ "$ext" = "bz2" ]; then
-        tar -xjf ${SOURCES}/$FILE
+        tar -xjf ${SOURCESDIR}/$FILE
     elif [ "$ext" = "xz" ]; then
-        tar -xJf ${SOURCES}/$FILE
+        tar -xJf ${SOURCESDIR}/$FILE
     elif [ "$ext" = "lzma" ]; then
-        tar --lzma -xf ${SOURCES}/$FILE
+        tar --lzma -xf ${SOURCESDIR}/$FILE
     fi
     echo "Extracted sources to $SRCPATH"
 
@@ -209,36 +203,8 @@ function_install() {
 echo "--------------"
 echo "Starting build"
 echo "--------------"
-PACKAGE=bc
-VERSION=1.06.95
-FILE="${PACKAGE}-${VERSION}.tar.bz2"
-SRCPATH=""
-BUILDPATH=""
-PATCHES=()
-ACTIONS=(
-    "./configure --prefix=/cross-tools"
-    "make"
-    "make install"
-)
-PRODUCT="/cross-tools/bin/bc"
-function_install
-
-PACKAGE=linux
-VERSION=3.10.14
-FILE="${PACKAGE}-${VERSION}.tar.xz"
-SRCPATH=""
-BUILDPATH=""
-PATCHES=()
-ACTIONS=(
-    "make mrproper"
-    "make ARCH=mips headers_check"
-    "make ARCH=mips INSTALL_HDR_PATH=/tools headers_install"
-)
-PRODUCT="/tools/include/linux/errno.h"
-function_install
-
 PACKAGE=file
-VERSION=5.15
+VERSION=5.19
 FILE="${PACKAGE}-${VERSION}.tar.gz"
 SRCPATH=""
 BUILDPATH=""
@@ -249,6 +215,22 @@ ACTIONS=(
     "make install"
 )
 PRODUCT="/cross-tools/bin/file"
+function_install
+
+PACKAGE=linux
+VERSION=3.14
+FILE="${PACKAGE}-${VERSION}.tar.xz"
+SRCPATH=""
+BUILDPATH=""
+PATCHES=(
+    "xzcat ${SOURCESDIR}/patch-3.14.21.xz | patch -Np1 -i -"
+)
+ACTIONS=(
+    "make mrproper"
+    "make ARCH=mips headers_check"
+    "make ARCH=mips INSTALL_HDR_PATH=/tools headers_install"
+)
+PRODUCT="/tools/include/linux/errno.h"
 function_install
 
 PACKAGE=m4
@@ -271,8 +253,8 @@ FILE="${PACKAGE}-${VERSION}.tar.gz"
 SRCPATH=""
 BUILDPATH=""
 PATCHES=(
-    "patch -Np1 -i ${SOURCES}/ncurses-5.9-bash_fix-1.patch"
-    "patch -Np1 -i ${SOURCES}/work_around_changed_output_of_GNU_cpp_5.x.patch"
+    "patch -Np1 -i ${SOURCESDIR}/ncurses-5.9-bash_fix-1.patch"
+    "patch -Np1 -i ${SOURCESDIR}/work_around_changed_output_of_GNU_cpp_5.x.patch"
 )
 ACTIONS=(
     "./configure --prefix=/cross-tools \
@@ -284,9 +266,24 @@ ACTIONS=(
 PRODUCT="/cross-tools/bin/tic"
 function_install
 
+PACKAGE=pkg-config-lite
+VERSION=0.28-1
+FILE="${PACKAGE}-${VERSION}.tar.gz"
+SRCPATH=""
+BUILDPATH=""
+PATCHES=()
+ACTIONS=(
+    "./configure --prefix=/cross-tools --host=${CLFS_TARGET} \
+        --with-pc-path=/tools/lib/pkgconfig:/tools/share/pkgconfig"
+    "make"
+    "make install"
+)
+PRODUCT="/cross-tools/bin/pkg-config"
+function_install
+
 PACKAGE=gmp
-VERSION=5.1.3
-FILE="${PACKAGE}-${VERSION}.tar.xz"
+VERSION=6.0.0
+FILE="${PACKAGE}-${VERSION}a.tar.xz"
 SRCPATH=""
 BUILDPATH=""
 PATCHES=()
@@ -296,7 +293,7 @@ ACTIONS=(
     "make"
     "make install"
 )
-PRODUCT="/cross-tools/lib/libgmp.so.10.1.3"
+PRODUCT="/cross-tools/lib/libgmp.so.10.2.0"
 function_install
 
 PACKAGE=mpfr
@@ -304,7 +301,9 @@ VERSION=3.1.2
 FILE="${PACKAGE}-${VERSION}.tar.xz"
 SRCPATH=""
 BUILDPATH=""
-PATCHES=()
+PATCHES=(
+    "patch -Np1 -i ${SOURCESDIR}/mpfr-3.1.2-fixes-4.patch"
+)
 ACTIONS=(
     "LDFLAGS=\"-Wl,-rpath,/cross-tools/lib\" \
         ./configure --prefix=/cross-tools \
@@ -316,7 +315,7 @@ PRODUCT="/cross-tools/lib/libmpfr.so.4.1.2"
 function_install
 
 PACKAGE=mpc
-VERSION=1.0.1
+VERSION=1.0.2
 FILE="${PACKAGE}-${VERSION}.tar.gz"
 SRCPATH=""
 BUILDPATH=""
@@ -332,7 +331,7 @@ PRODUCT="/cross-tools/lib/libmpc.so.3.0.0"
 function_install
 
 PACKAGE=isl
-VERSION=0.12.1
+VERSION=0.12.2
 FILE="${PACKAGE}-${VERSION}.tar.lzma"
 SRCPATH=""
 BUILDPATH=""
@@ -344,11 +343,11 @@ ACTIONS=(
     "make"
     "make install"
 )
-PRODUCT="/cross-tools/lib/libisl.so.10.2.1"
+PRODUCT="/cross-tools/lib/libisl.so.10.2.2"
 function_install
 
 PACKAGE=cloog
-VERSION=0.18.0
+VERSION=0.18.2
 FILE="${PACKAGE}-${VERSION}.tar.gz"
 SRCPATH=""
 BUILDPATH=""
@@ -357,6 +356,8 @@ ACTIONS=(
     "LDFLAGS="-Wl,-rpath,/cross-tools/lib" \
         ./configure --prefix=/cross-tools --disable-static \
         --with-gmp-prefix=/cross-tools  --with-isl-prefix=/cross-tools"
+    "cp -v Makefile{,.orig}"
+    "sed '/cmake/d' Makefile.orig > Makefile"
     "make"
     "make install"
 )
@@ -364,77 +365,72 @@ PRODUCT="/cross-tools/lib/libcloog-isl.so.4.0.0"
 function_install
 
 PACKAGE=binutils
-VERSION=2.23.2
+VERSION=2.24
 FILE="${PACKAGE}-${VERSION}.tar.bz2"
 SRCPATH=""
 BUILDPATH="binutils-build"
-PATCHES=(
-    "sed -i -e 's/@colophon/@@colophon/' -e 's/doc@cygnus.com/doc@@cygnus.com/' bfd/doc/bfd.texinfo"
-    "patch -Np1 -i ${SOURCES}/binutils-fix-errors-in-bfd-header.patch"
-)
+PATCHES=()
 ACTIONS=(
-    "AR=ar AS=as ../binutils-2.23.2/configure \
+    "AR=ar AS=as ../binutils-2.24/configure \
         --prefix=/cross-tools --host=${CLFS_HOST} --target=${CLFS_TARGET} \
         --with-sysroot=${CLFS} --with-lib-path=/tools/lib --disable-nls \
         --disable-static --disable-multilib --disable-werror"
     "make configure-host"
     "make"
     "make install"
-    "cp -v ../binutils-2.23.2/include/libiberty.h /tools/include"
 )
-PRODUCT="/cross-tools/bin/mips-unknown-linux-gnu-as"
+PRODUCT="/cross-tools/bin/${CLFS_TARGET}-as"
 function_install
 
 PACKAGE=gcc
-VERSION=4.8.1
+VERSION=4.8.3
 FILE="${PACKAGE}-${VERSION}.tar.bz2"
 SRCPATH=""
 BUILDPATH="gcc-build"
 PATCHES=(
-    "patch -Np1 -i ${SOURCES}/gcc-4.8.1-branch_update-3.patch"
-    "patch -Np1 -i ${SOURCES}/gcc-4.8.1-specs-1.patch"
+    "patch -Np1 -i ${SOURCESDIR}/gcc-4.8.3-branch_update-1.patch"
+    "patch -Np1 -i ${SOURCESDIR}/gcc-4.8.3-specs-1.patch"
     "echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 \"/tools/lib/\"\n' >> gcc/config/linux.h"
     "echo -en '\n#undef STANDARD_STARTFILE_PREFIX_2\n#define STANDARD_STARTFILE_PREFIX_2 \"\"\n' >> gcc/config/linux.h"
+    "touch /tools/include/limits.h"
 )
 ACTIONS=(
-    "touch /tools/include/limits.h"
     "AR=ar LDFLAGS=\"-Wl,-rpath,/cross-tools/lib\" \
-        ../gcc-4.8.1/configure --prefix=/cross-tools \
+        ../gcc-4.8.3/configure --prefix=/cross-tools \
         --build=${CLFS_HOST} --host=${CLFS_HOST} --target=${CLFS_TARGET} \
         --with-sysroot=${CLFS} --with-local-prefix=/tools \
         --with-native-system-header-dir=/tools/include --disable-nls \
         --disable-shared --with-mpfr=/cross-tools --with-gmp=/cross-tools \
         --with-isl=/cross-tools --with-cloog=/cross-tools --with-mpc=/cross-tools \
         --without-headers --with-newlib --disable-decimal-float --disable-libgomp \
-        --disable-libmudflap --disable-libssp --disable-threads --disable-multilib \
-        --disable-libatomic --disable-libitm --disable-libsanitizer \
-        --disable-libquadmath --disable-target-libiberty --disable-target-zlib \
-        --with-system-zlib --enable-cloog-backend=isl --disable-isl-version-check \
+        --disable-libmudflap --disable-libssp --disable-libatomic --disable-libitm \
+        --disable-libsanitizer --disable-libquadmath --disable-threads \
+        --disable-multilib --disable-target-zlib --with-system-zlib \
         --enable-languages=c --enable-checking=release"
     "make all-gcc all-target-libgcc"
     "make install-gcc install-target-libgcc"
 )
-PRODUCT="/cross-tools/bin/mips-unknown-linux-gnu-gcc"
+PRODUCT="/cross-tools/bin/${CLFS_TARGET}-gcc"
 function_install
 
-PACKAGE=eglibc
-VERSION=2.18
-FILE="${PACKAGE}-${VERSION}-r24148.tar.xz"
+PACKAGE=glibc
+VERSION=2.19
+FILE="${PACKAGE}-${VERSION}.tar.xz"
 SRCPATH=""
-BUILDPATH="eglibc-build"
+BUILDPATH="glibc-build"
 PATCHES=(
-    "patch -Np0 -i ${SOURCES}/eglibc-2.18-fixmake-versioncheck.patch"
+    "cp -v timezone/Makefile{,.orig}"
+    "sed 's/\\\\\$\$(pwd)/\`pwd\`/' timezone/Makefile.orig > timezone/Makefile"
 )
 ACTIONS=(
     "echo \"libc_cv_ssp=no\" > config.cache"
     "BUILD_CC=\"gcc\" CC=\"${CLFS_TARGET}-gcc\" \
         AR=\"${CLFS_TARGET}-ar\" RANLIB=\"${CLFS_TARGET}-ranlib\" \
-        ../eglibc-2.18/configure --prefix=/tools \
+        ../glibc-2.19/configure --prefix=/tools \
         --host=${CLFS_TARGET} --build=${CLFS_HOST} \
-        --disable-profile --with-tls --enable-kernel=${KERNEL_VER} \
-        --with-__thread --with-binutils=/cross-tools/bin \
-        --with-headers=/tools/include --enable-obsolete-rpc \
-        --cache-file=config.cache"
+        --disable-profile --enable-kernel=${KERNEL_VER} \
+        --with-binutils=/cross-tools/bin --with-headers=/tools/include \
+        --enable-obsolete-rpc --cache-file=config.cache"
     "make"
     "make install"
 )
@@ -443,36 +439,33 @@ function_install
 
 # Second build and installation of gcc (also installs g++)
 PACKAGE=gcc
-VERSION=4.8.1
+VERSION=4.8.3
 FILE="${PACKAGE}-${VERSION}.tar.bz2"
 SRCPATH=""
 BUILDPATH="gcc-build"
 PATCHES=(
-    "patch -Np1 -i ${SOURCES}/gcc-4.8.1-branch_update-3.patch"
-    "patch -Np1 -i ${SOURCES}/gcc-4.8.1-specs-1.patch"
-    "patch -Np2 -i ${SOURCES}/gcc-4.8.1-fix-cfns-inlines.patch"
+    "patch -Np1 -i ${SOURCESDIR}/gcc-4.8.3-branch_update-1.patch"
+    "patch -Np1 -i ${SOURCESDIR}/gcc-4.8.3-specs-1.patch"
     "echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 \"/tools/lib/\"\n' >> gcc/config/linux.h"
     "echo -en '\n#undef STANDARD_STARTFILE_PREFIX_2\n#define STANDARD_STARTFILE_PREFIX_2 \"\"\n' >> gcc/config/linux.h"
 )
 ACTIONS=(
-    "touch /tools/include/limits.h"
     "AR=ar LDFLAGS=\"-Wl,-rpath,/cross-tools/lib\" \
-        ../gcc-4.8.1/configure --prefix=/cross-tools \
+        ../gcc-4.8.3/configure --prefix=/cross-tools \
         --build=${CLFS_HOST} --target=${CLFS_TARGET} --host=${CLFS_HOST} \
         --with-sysroot=${CLFS} --with-local-prefix=/tools \
         --with-native-system-header-dir=/tools/include --disable-nls \
-        --enable-shared --disable-static --enable-languages=c,c++ \
-        --enable-__cxa_atexit --enable-c99 --enable-long-long --enable-threads=posix \
+        --disable-static --enable-languages=c,c++ \
+        --enable-__cxa_atexit --enable-threads=posix \
         --disable-multilib --with-mpc=/cross-tools --with-mpfr=/cross-tools \
         --with-gmp=/cross-tools --with-cloog=/cross-tools \
-        --enable-cloog-backend=isl --with-isl=/cross-tools \
-        --disable-isl-version-check --with-system-zlib --enable-checking=release \
+        --with-isl=/cross-tools --with-system-zlib --enable-checking=release \
         --enable-libstdcxx-time"
     "make AS_FOR_TARGET=\"${CLFS_TARGET}-as\" \
         LD_FOR_TARGET=\"${CLFS_TARGET}-ld\""
     "make install"
 )
-PRODUCT="/tools/bin/mips-unknown-linux-gnu-g++"
+PRODUCT="/cross-tools/bin/${CLFS_TARGET}-g++"
 function_install
 
 ###################################
