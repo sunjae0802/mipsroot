@@ -455,7 +455,7 @@ ACTIONS=(
         --build=${CLFS_HOST} --target=${CLFS_TARGET} --host=${CLFS_HOST} \
         --with-sysroot=${CLFS} --with-local-prefix=/tools \
         --with-native-system-header-dir=/tools/include --disable-nls \
-        --disable-static --enable-languages=c,c++ \
+        --enable-static --enable-languages=c,c++ \
         --enable-__cxa_atexit --enable-threads=posix \
         --disable-multilib --with-mpc=/cross-tools --with-mpfr=/cross-tools \
         --with-gmp=/cross-tools --with-cloog=/cross-tools \
