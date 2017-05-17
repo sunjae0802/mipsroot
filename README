@@ -6,7 +6,7 @@ We assume an environment variable CLFS set to a working directory, i.e. /home/us
 $ export CLFS=$HOME/mipsroot
 
 To download the relevant sources, run
-$ wget -i dl-mips-cc.list -P ${CLFS}/sources
+$ wget -i dl.list -P ${CLFS}/sources
 
 I've also included the patch files which should be included in the ${CLFS}/sources directory.
 
