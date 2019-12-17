@@ -238,7 +238,9 @@ VERSION=1.4.17
 FILE="${PACKAGE}-${VERSION}.tar.xz"
 SRCPATH=""
 BUILDPATH=""
-PATCHES=()
+PATCHES=(
+    "patch -Np1 -i ${SOURCESDIR}/m4.patch"
+)
 ACTIONS=(
     "./configure --prefix=/cross-tools"
     "make"
@@ -258,7 +260,7 @@ PATCHES=(
 )
 ACTIONS=(
     "./configure --prefix=/cross-tools \
-        --without-debug --without-shared"
+        --without-debug --without-shared CPPFLAGS=\"-P\""
     "make -C include"
     "make -C progs tic"
     "install -v -m755 progs/tic /cross-tools/bin"
@@ -390,6 +392,7 @@ BUILDPATH="gcc-build"
 PATCHES=(
     "patch -Np1 -i ${SOURCESDIR}/gcc-4.8.3-branch_update-1.patch"
     "patch -Np1 -i ${SOURCESDIR}/gcc-4.8.3-specs-1.patch"
+    "patch -Np1 -i ${SOURCESDIR}/patch-gcc48-texi.diff"
     "echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 \"/tools/lib/\"\n' >> gcc/config/linux.h"
     "echo -en '\n#undef STANDARD_STARTFILE_PREFIX_2\n#define STANDARD_STARTFILE_PREFIX_2 \"\"\n' >> gcc/config/linux.h"
     "touch /tools/include/limits.h"
@@ -446,6 +449,7 @@ BUILDPATH="gcc-build"
 PATCHES=(
     "patch -Np1 -i ${SOURCESDIR}/gcc-4.8.3-branch_update-1.patch"
     "patch -Np1 -i ${SOURCESDIR}/gcc-4.8.3-specs-1.patch"
+    "patch -Np1 -i ${SOURCESDIR}/patch-gcc48-texi.diff"
     "echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 \"/tools/lib/\"\n' >> gcc/config/linux.h"
     "echo -en '\n#undef STANDARD_STARTFILE_PREFIX_2\n#define STANDARD_STARTFILE_PREFIX_2 \"\"\n' >> gcc/config/linux.h"
 )
