@@ -450,6 +450,7 @@ PATCHES=(
     "patch -Np1 -i ${SOURCESDIR}/gcc-4.8.3-branch_update-1.patch"
     "patch -Np1 -i ${SOURCESDIR}/gcc-4.8.3-specs-1.patch"
     "patch -Np1 -i ${SOURCESDIR}/patch-gcc48-texi.diff"
+    "patch -Np1 -i ${SOURCESDIR}/gcc-fix-gperf.patch"
     "echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 \"/tools/lib/\"\n' >> gcc/config/linux.h"
     "echo -en '\n#undef STANDARD_STARTFILE_PREFIX_2\n#define STANDARD_STARTFILE_PREFIX_2 \"\"\n' >> gcc/config/linux.h"
 )
